@@ -177,6 +177,48 @@ namespace HMSBackend.Controllers
             }
         }
 
+        [HttpGet]
+        [Route("patient_hist/fetchAll")]
+        public ActionResult<string> GetPatienthistData()
+        {
+            List<Patient_hist> patient_hist = new List<Patient_hist>();
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+                    string sqlQuery = "SELECT * FROM patient_history_table";
+                    SqlCommand cmd = new SqlCommand(sqlQuery, con);
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        Patient_hist patient_Hist = new Patient_hist
+                        {
+                            patient_hist_id = reader["patient_hist_id"] as string,
+                            date = (DateTime)reader["date"],
+                            patient_type = reader["patient_type"] as string,
+                            patient_id = reader["patient_id"] as string,
+                            treatment_type = reader["treatment_type"] as string,
+                            specialist = reader["specialist"] as string[],
+                            patient_description = reader["patient_description"] as string,
+                            comment = reader["comment"] as string,
+                            doctor_id = reader["doctor_id"] as string
+
+                        };
+
+                        patient_hist.Add(patient_Hist);
+                    }
+                    reader.Close();
+                }
+
+                return Ok(patient_hist);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred: " + ex.Message);
+            }
+        }
+
 
     }
 }

@@ -29,12 +29,31 @@ namespace HMSBackend.Controllers
 
             try
             {
+                int page = Convert.ToInt32(Request.Query["page"]);
+                int pageSize = Convert.ToInt32(Request.Query["pageSize"]);
+                string sortBy = Request.Query["sortBy"];
+                string order = Request.Query["order"];
+
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
 
-                    string sqlQuery = "SELECT * FROM patient_table";
+                    string sqlQuery = $@"
+                    SELECT *
+                    FROM (
+                        SELECT *,
+                            ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
+                        FROM patient_table
+                    ) AS Subquery
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow";
+
+                    int startRow = (page - 1) * pageSize + 1;
+                    int endRow = page * pageSize;
+
                     SqlCommand cmd = new SqlCommand(sqlQuery, con);
+                    cmd.Parameters.AddWithValue("@StartRow", startRow);
+                    cmd.Parameters.AddWithValue("@EndRow", endRow);
+
                     SqlDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
@@ -47,7 +66,7 @@ namespace HMSBackend.Controllers
                             age = (int)reader["age"],
                             gender = reader["gender"] as string, // Correct the column name
                             doctor_id = reader["doctor_id"] as string,
-                            reg_by = reader["reg_by"] as string
+                            created_by = reader["created_by"] as string
                         };
 
                         patientList.Add(patient);
@@ -59,8 +78,9 @@ namespace HMSBackend.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest("Failed to fetch patient data: " + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
 
         [HttpPost]
@@ -74,7 +94,7 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("INSERT INTO patient_table(patient_id, name, mobile, email, age, gender, address, doctor_id, reg_by) VALUES(@patient_id, @name, @mobile, @email, @age, @gender, @address, @doctor_id, @reg_by)", con);
+                    SqlCommand cmd = new SqlCommand("INSERT INTO patient_table(patient_id, name, mobile, email, age, gender, address, doctor_id, created_by) VALUES(@patient_id, @name, @mobile, @email, @age, @gender, @address, @doctor_id, @created_by)", con);
                     cmd.Parameters.AddWithValue("@patient_id", newPatientId); // Use the auto-generated ID
                     cmd.Parameters.AddWithValue("@name", patientDetails.name);
                     cmd.Parameters.AddWithValue("@mobile", patientDetails.mobile);
@@ -83,25 +103,26 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@gender", patientDetails.gender);
                     cmd.Parameters.AddWithValue("@address", patientDetails.address);
                     cmd.Parameters.AddWithValue("@doctor_id", patientDetails.doctor_id);
-                    cmd.Parameters.AddWithValue("@reg_by", patientDetails.reg_by);
+                    cmd.Parameters.AddWithValue("@created_by", patientDetails.created_by);
 
                     int i = cmd.ExecuteNonQuery();
                     cmd.Dispose();
 
                     if (i > 0)
                     {
-                        return Ok("Patient created successfully");
+                        return Ok(new { message = "Patient created successfully" });
                     }
                     else
                     {
-                        return BadRequest("Error");
+                        return BadRequest(new { message = "Error" });
                     }
                 }
             }
             catch (Exception ex)
             {
-                return BadRequest("Failed to create patient: " + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
 
 
@@ -130,18 +151,19 @@ namespace HMSBackend.Controllers
 
                     if (i > 0)
                     {
-                        return Ok("Data hase been Updated");
+                        return Ok(new {message = "Patient hase been Updated" });
                     }
                     else
                     {
-                        return BadRequest("Error");
+                        return BadRequest(new { message = "Error" });
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                return BadRequest("failed to update patient data: " + ex);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
 
 
@@ -162,7 +184,7 @@ namespace HMSBackend.Controllers
 
                     if (i > 0)
                     {
-                        return Ok("Data has Deleted.");
+                        return Ok(new {message = "Patient Deleted Successfuly." });
                     }
                     else
                     {
@@ -173,8 +195,9 @@ namespace HMSBackend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred: " + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
 
         [HttpGet]
@@ -215,8 +238,9 @@ namespace HMSBackend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred: " + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
 
 

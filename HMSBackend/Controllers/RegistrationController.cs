@@ -57,8 +57,9 @@ namespace HMSBackend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred" + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
     }
 }

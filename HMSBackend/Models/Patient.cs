@@ -10,7 +10,7 @@
         public string gender { get; set; }
         public string address { get; set; }
         public string doctor_id { get; set; }
-        public string reg_by { get; set; }
+        public string created_by { get; set; }
 
     }
 }

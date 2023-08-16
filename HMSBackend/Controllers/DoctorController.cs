@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 //using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -22,22 +23,40 @@ namespace HMSBackend.Controllers
             _configuration = configuration;
         }
 
+        ////Server side paging and sorting
         [HttpGet]
         [Route("doctor/fetchAll")]
         public ActionResult<IEnumerable<Doctor>> GetDoctor()
         {
-            List<Doctor> doctorList = new List<Doctor>();
-
             try
             {
+                int page = Convert.ToInt32(Request.Query["page"]);
+                int pageSize = Convert.ToInt32(Request.Query["pageSize"]);
+                string sortBy = Request.Query["sortBy"];
+                string order = Request.Query["order"];
+
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
 
-                    string sqlQuery = "SELECT doctor_id, name, mobile, email, specialist, qualification, address FROM doctor_table";
+                    string sqlQuery = $@"
+                    SELECT doctor_id, name, mobile, email, specialist, qualification, address
+                    FROM (
+                        SELECT *,
+                            ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
+                        FROM doctor_table
+                    ) AS Subquery
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow";
+
+                    int startRow = (page - 1) * pageSize + 1;
+                    int endRow = page * pageSize;
+
                     SqlCommand cmd = new SqlCommand(sqlQuery, con);
+                    cmd.Parameters.AddWithValue("@StartRow", startRow);
+                    cmd.Parameters.AddWithValue("@EndRow", endRow);
 
                     SqlDataReader reader = cmd.ExecuteReader();
+                    List<Doctor> doctorList = new List<Doctor>();
                     while (reader.Read())
                     {
                         Doctor doctor = new Doctor
@@ -47,24 +66,27 @@ namespace HMSBackend.Controllers
                             mob_no = reader["mobile"] as string,
                             email = reader["email"] as string,
                             qualification = reader["qualification"] as string,
-                            address = reader["address"] as string
+                            address = reader["address"] as string,
+                            // Fetch the specialist data and parse it as a string array
+                            specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
                         };
-
-                        string specialist = reader["specialist"] as string;
-                        doctor.specialist = specialist.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
                         doctorList.Add(doctor);
                     }
                     reader.Close();
 
+                    return Ok(doctorList);
                 }
-                return Ok(doctorList);
             }
             catch (Exception ex)
             {
-                return BadRequest("Fieled to fetch doctors data" + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
+
+
+
 
         //POST
         [HttpPost]
@@ -93,18 +115,19 @@ namespace HMSBackend.Controllers
 
                     if(i > 0)
                     {
-                        return Ok("Data has been Inserted");
+                        return Ok(new {meesage = "Doctor has been Inserted"});
                     }
                     else
                     {
-                        return BadRequest("Error");
+                        return BadRequest(new { message = "Error" });
                     }
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred" + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
 
         [HttpPut]
@@ -132,18 +155,19 @@ namespace HMSBackend.Controllers
 
                     if (i > 0)
                     {
-                        return Ok("Data has been updated");
+                        return Ok(new { message = "Doctor has been updated" });
                     }
                     else
                     {
-                        return BadRequest("Error");
+                        return BadRequest(new { message = "Error" });
                     }
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred: " + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
+
         }
 
         [HttpDelete]
@@ -164,19 +188,81 @@ namespace HMSBackend.Controllers
 
                     if (i > 0)
                     {
-                        return Ok("Data has been Deleted");
+                        return Ok(new { message = "Doctor Deleted Successfuly" });
                     }
                     else
                     {
-                        return BadRequest("Error");
+                        return BadRequest(new { message = "Error" });
                     }
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred: " + ex.Message);
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
         }
+
+        [HttpPost]
+        [Route("doctor/filter")]
+        public ActionResult<IEnumerable<Doctor>> PostFilterData(FilterCriteria filterCriteria)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+
+                    string query = "SELECT doctor_id, name, mobile, email, qualification, address, specialist " +
+                                   "FROM doctor_table " +
+                                   "WHERE doctor_id LIKE '%' + @doctor_id + '%' OR " +
+                                   "      name LIKE '%' + @name + '%' OR " +
+                                   "specialist LIKE '%' + @specialist + '%'";
+
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
+                    cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
+                    //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
+                    cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
+
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    List<Doctor> doctors = new List<Doctor>();
+
+                    while (reader.Read())
+                    {
+                        Doctor doctor = new Doctor
+                        {
+                            doctor_id = reader["doctor_id"] as string,
+                            name = reader["name"] as string,
+                            mob_no = reader["mobile"] as string,
+                            email = reader["email"] as string,
+                            qualification = reader["qualification"] as string,
+                            address = reader["address"] as string,
+                            specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
+                        };
+
+                        doctors.Add(doctor);
+                    }
+
+                    reader.Close();
+                    return Ok(doctors);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+
+                var errorResponse = new
+                {
+                    status = 500,
+                    message = "An error occurred: " + ex.Message
+                };
+
+                return StatusCode(500, errorResponse);
+            }
+
+        }
+
 
 
     }

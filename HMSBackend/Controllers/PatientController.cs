@@ -243,6 +243,55 @@ namespace HMSBackend.Controllers
 
         }
 
+        [HttpPost]
+        [Route("patient/filter")]
+        public ActionResult<IEnumerable<Patient>> PostFilterData(FilterPatientCriteria filterCriteria)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+
+                    string query = "SELECT * " +
+                                   "FROM patient_table " +
+                                   "WHERE patient_id LIKE '%' + @patient_id + '%' OR " +
+                                   "      name LIKE '%' + @name + '%' ";
+
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@patient_id", filterCriteria.patient_id);
+                    cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
+
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    List<Patient> patients = new List<Patient>();
+
+                    while (reader.Read())
+                    {
+                        Patient patient = new Patient
+                        {
+                            patient_id = reader["patient_id"] as string,
+                            name = reader["name"] as string,
+                            mobile = reader["mobile"] as string,
+                            email = reader["email"] as string,
+                            age = (int)reader["age"],
+                            gender = reader["gender"] as string, // Correct the column name
+                            doctor_id = reader["doctor_id"] as string,
+                            created_by = reader["created_by"] as string
+                        };
+
+                        patients.Add(patient);
+                    }
+                    reader.Close();
+                    return Ok(patients);
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+            }
+
+        }
 
     }
 }

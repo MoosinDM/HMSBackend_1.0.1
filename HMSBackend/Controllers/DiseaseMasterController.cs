@@ -91,5 +91,8 @@ namespace HMSBackend.Controllers
                 return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
         }
+
+        //[HttpPut]
+        //[Route("disease_Master/update")]
     }
 }

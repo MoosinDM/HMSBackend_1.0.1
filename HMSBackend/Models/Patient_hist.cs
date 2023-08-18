@@ -8,9 +8,10 @@
         public string patient_id { get; set; }
         public string patient_name { get; set; }
         public string treatment_type { get; set; }
-        public string[] specialist { get; set; }
+        public string specialist { get; set; }
         public string patient_description { get; set; }
         public string comment { get; set; }
         public string doctor_id { get; set; }
+        public string created_by { get; set; }
     }
 }

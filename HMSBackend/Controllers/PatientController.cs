@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.SignalR.Protocol;
 
 namespace HMSBackend.Controllers
 {
@@ -200,48 +201,6 @@ namespace HMSBackend.Controllers
 
         }
 
-        [HttpGet]
-        [Route("patient_hist/fetchAll")]
-        public ActionResult<string> GetPatienthistData()
-        {
-            List<Patient_hist> patient_hist = new List<Patient_hist>();
-            try
-            {
-                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-                {
-                    con.Open();
-                    string sqlQuery = "SELECT * FROM patient_history_table";
-                    SqlCommand cmd = new SqlCommand(sqlQuery, con);
-                    SqlDataReader reader = cmd.ExecuteReader();
-                    while (reader.Read())
-                    {
-                        Patient_hist patient_Hist = new Patient_hist
-                        {
-                            patient_hist_id = reader["patient_hist_id"] as string,
-                            date = (DateTime)reader["date"],
-                            patient_type = reader["patient_type"] as string,
-                            patient_id = reader["patient_id"] as string,
-                            treatment_type = reader["treatment_type"] as string,
-                            specialist = reader["specialist"] as string[],
-                            patient_description = reader["patient_description"] as string,
-                            comment = reader["comment"] as string,
-                            doctor_id = reader["doctor_id"] as string
-
-                        };
-
-                        patient_hist.Add(patient_Hist);
-                    }
-                    reader.Close();
-                }
-
-                return Ok(patient_hist);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
-            }
-
-        }
 
         [HttpPost]
         [Route("patient/filter")]
@@ -291,6 +250,217 @@ namespace HMSBackend.Controllers
                 return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
 
+        }
+
+
+        
+        /// Patient History API and CRUD Operations
+
+        [HttpGet]
+        [Route("patient_hist/fetchAll")]
+        public ActionResult<string> GetPatienthistData()
+        {
+            List<Patient_hist> patient_hist = new List<Patient_hist>();
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+                    string sqlQuery = "SELECT * FROM patient_history_table";
+                    SqlCommand cmd = new SqlCommand(sqlQuery, con);
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        Patient_hist patient_Hist = new Patient_hist
+                        {
+                            patient_hist_id = reader["patient_hist_id"] as string,
+                            date = (DateTime)reader["date"],
+                            patient_type = reader["patient_type"] as string,
+                            patient_id = reader["patient_id"] as string,
+                            treatment_type = reader["treatment_type"] as string,
+                            specialist = reader["specialist"] as string,
+                            patient_description = reader["patient_description"] as string,
+                            comment = reader["comment"] as string,
+                            doctor_id = reader["doctor_id"] as string,
+                            created_by = reader["created_by"] as string
+                        };
+
+                        patient_hist.Add(patient_Hist);
+                    }
+                    reader.Close();
+                }
+
+                return Ok(patient_hist);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+            }
+
+        }
+
+        //[HttpPost]
+        //[Route("patient_hist/create")]
+        //public ActionResult<string> PostPatient_hist(Patient_hist patient_Hist)
+        //{
+        //    try
+        //    {
+        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+        //        {
+        //            con.Open();
+        //            SqlCommand cmd = new SqlCommand("INSERT INTO patient_history_table(patient_hist_id, patient_id, patient_type, treatment_type, doctor_id, specialist, details, comment, created_by) VALUES(@patient_hist_id, @patient_id, @patient_type, @treatment_type, @doctor_id, @specialist, @details, @comment, @created_by)");
+        //            cmd.Parameters.AddWithValue("@patient_hist_id", patient_Hist.patient_hist_id);
+        //            cmd.Parameters.AddWithValue("@patient_id", patient_Hist.patient_id);
+        //            cmd.Parameters.AddWithValue("@patient_type", patient_Hist.patient_type);
+        //            cmd.Parameters.AddWithValue("@teatment_type", patient_Hist.treatment_type);
+        //            cmd.Parameters.AddWithValue("@doctor_id", patient_Hist.doctor_id);
+        //            cmd.Parameters.AddWithValue("@specialist", patient_Hist.specialist);
+        //            cmd.Parameters.AddWithValue("@details", patient_Hist.patient_description);
+        //            cmd.Parameters.AddWithValue("@comment", patient_Hist.comment);
+        //            cmd.Parameters.AddWithValue("@created_by", patient_Hist.created_by);
+
+        //            int i = cmd.ExecuteNonQuery();
+        //            cmd.Dispose();
+
+        //            if (i > 0)
+        //            {
+        //                return Ok(new { message = "Patient created successfully" });
+        //            }
+        //            else
+        //            {
+        //                return BadRequest(new { message = "Error" });
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+        //    }
+        //}
+
+        [HttpPost]
+        [Route("patient_hist/create")]
+        public ActionResult<string> PostPatient_hist(Patient_hist patient_Hist)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("INSERT INTO patient_history_table(patient_hist_id, patient_id, patient_type, treatment_type, doctor_id, specialist, patient_description, comment, created_by) VALUES(@patient_hist_id, @patient_id, @patient_type, @treatment_type, @doctor_id, @specialist, @patient_description, @comment, @created_by)", con);
+                    cmd.Parameters.AddWithValue("@patient_hist_id", patient_Hist.patient_hist_id);
+                    cmd.Parameters.AddWithValue("@patient_id", patient_Hist.patient_id);
+                    cmd.Parameters.AddWithValue("@patient_type", patient_Hist.patient_type);
+                    cmd.Parameters.AddWithValue("@treatment_type", patient_Hist.treatment_type); // Fixed typo here
+                    cmd.Parameters.AddWithValue("@doctor_id", patient_Hist.doctor_id);
+                    cmd.Parameters.AddWithValue("@specialist", patient_Hist.specialist);
+                    cmd.Parameters.AddWithValue("@patient_description", patient_Hist.patient_description);
+                    cmd.Parameters.AddWithValue("@comment", patient_Hist.comment);
+                    cmd.Parameters.AddWithValue("@created_by", patient_Hist.created_by);
+
+                    int i = cmd.ExecuteNonQuery();
+                    cmd.Dispose();
+
+                    if (i > 0)
+                    {
+                        return Ok(new { message = "Patient History created successfully" });
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Error" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+            }
+        }
+
+
+        [HttpPut]
+        [Route("patient_hist/update/{id}")]
+        public ActionResult<string> PutPatienthist(string id, Patient_hist patient_Hist)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+                    string query = "UPDATE PATIENT_HISTORY_TABLE SET patient_type = @patient_type, treatment_type = @treatment_type, doctor_id = @doctor_id, specialist = @specialist, patient_description = @patient_description, comment = @comment WHERE Patient_hist_id = @id";
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    cmd.Parameters.AddWithValue("@patient_type", patient_Hist.patient_type);
+                    cmd.Parameters.AddWithValue("@treatment_type", patient_Hist.treatment_type);
+                    cmd.Parameters.AddWithValue("@doctor_id", patient_Hist.doctor_id);
+                    cmd.Parameters.AddWithValue("@specialist", patient_Hist.specialist);
+                    cmd.Parameters.AddWithValue("@patient_description", patient_Hist.patient_description);
+                    cmd.Parameters.AddWithValue("@comment", patient_Hist.comment);
+                   // cmd.Parameters.AddWithValue("@patient_hist_id", patient_Hist.patient_hist_id);
+
+                    int i = cmd.ExecuteNonQuery();
+                    cmd.Dispose();
+                    if (i > 0)
+                    {
+                        return Ok(new { message = "Patient History hase been Updated" });
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Error" });
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [Route("patient_hist/filter")]
+        public ActionResult<string> PostPatienthistFilter(FilterPatientHistCriteria filterPatientHistCriteria)
+        {
+            using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+            {
+                con.Open();
+                string query = "SELECT * " +
+                                   "FROM patient_history_table " +
+                                   "WHERE patient_hist_id LIKE '%' + @patient_hist_id + '%' OR " +
+                                   "      patient_id LIKE '%' + @patient_id + '%' ";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@patient_hist_id", filterPatientHistCriteria.patient_hist_id);
+                cmd.Parameters.AddWithValue("@patient_id", "%" + filterPatientHistCriteria.patient_id + "%");
+
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                List<Patient_hist> patients = new List<Patient_hist>();
+
+                while (reader.Read())
+                {
+                    Patient_hist patient_hist = new Patient_hist
+                    {
+                        patient_hist_id = reader["patient_hist_id"] as string,
+                        date = (DateTime)reader["date"],
+                        patient_type = reader["patient_type"] as string,
+                        patient_id = reader["patient_id"] as string,
+                        treatment_type = reader["treatment_type"] as string,
+                        specialist = reader["specialist"] as string,
+                        patient_description = reader["patient_description"] as string,
+                        comment = reader["comment"] as string,
+                        doctor_id = reader["doctor_id"] as string,
+                        created_by = reader["created_by"] as string
+                    };
+
+                    patients.Add(patient_hist);
+                }
+                reader.Close();
+                return Ok(patients);
+
+
+
+            }
         }
 
     }

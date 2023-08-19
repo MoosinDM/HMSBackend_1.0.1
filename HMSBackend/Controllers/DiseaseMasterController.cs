@@ -25,7 +25,7 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("SELECT * FROM disease_master_table", con);
+                    SqlCommand cmd = new SqlCommand("SELECT * FROM disease_master", con);
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Disease_master> diseaseList = new List<Disease_master>();
                     while (reader.Read())
@@ -65,14 +65,13 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("INSERT INTO disease_master_table(disease_id, specialist, disease_type, sub_disease_type, treatment_type, created_by, updated_by) Values(@disease_id, @specialist, @disease_type, @sub_disease_type, @treatment_type, @created_by, @updated_by)", con);
+                    SqlCommand cmd = new SqlCommand("INSERT INTO disease_master(disease_id, specialist, disease_type, sub_disease_type, treatment_type, created_by) Values(@disease_id, @specialist, @disease_type, @sub_disease_type, @treatment_type, @created_by)", con);
                     cmd.Parameters.AddWithValue("@disease_id", disease_Master.disease_master_id);
                     cmd.Parameters.AddWithValue("@specialist", disease_Master.specialist);
                     cmd.Parameters.AddWithValue("disease_type", disease_Master.disease_type);
                     cmd.Parameters.AddWithValue("sub_disease_type", disease_Master.sub_disese_type);
                     cmd.Parameters.AddWithValue("treatment_type", disease_Master.treatment_type);
                     cmd.Parameters.AddWithValue("created_by", disease_Master.created_by);
-                    cmd.Parameters.AddWithValue("updated_by", disease_Master.updated_by);
 
                     int i = cmd.ExecuteNonQuery();
 
@@ -92,7 +91,40 @@ namespace HMSBackend.Controllers
             }
         }
 
-        //[HttpPut]
-        //[Route("disease_Master/update")]
+        [HttpPut]
+        [Route("disease_Master/update")]
+        public ActionResult<string> PutdiseaseMaster(string disease_id, Disease_master disease_Master)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("UPDATE disease_master SET specialist = @specialist, disease_type = @disease_type, sub_disease_type = @sub_disease_type, treatment_type = @treatment_type, updated_by = @updated_by WHERE disease_id = @disease_id", con);
+                    cmd.Parameters.AddWithValue("@disease_id", disease_id);
+                    cmd.Parameters.AddWithValue("@specialist", disease_Master.specialist);
+                    cmd.Parameters.AddWithValue("@disease_type", disease_Master.disease_type);
+                    cmd.Parameters.AddWithValue("@sub_disease_type", disease_Master.sub_disese_type);
+                    cmd.Parameters.AddWithValue("@treatment_type", disease_Master.treatment_type);
+                    cmd.Parameters.AddWithValue("@updated_by", disease_Master.updated_by);
+
+                    int i = cmd.ExecuteNonQuery();
+                    cmd.Dispose();
+
+                    if (i > 0)
+                    {
+                        return Ok(new { message = "Disease Updated Succesful" });
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Error" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+            }
+        }
     }
 }

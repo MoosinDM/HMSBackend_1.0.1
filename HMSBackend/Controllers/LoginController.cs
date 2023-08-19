@@ -51,7 +51,7 @@ namespace HMSBackend.Controllers
                     bool isDefault = Convert.ToBoolean(dt.Rows[0]["is_default"]);
 
                     // Generate JWT token
-                    var token = GenerateJwtToken(userId, userName);
+                    var token = GenerateJwtToken(userId, userName, userEmail, isDefault);
 
                     // Return user details and token as response
                     return Ok(new
@@ -72,23 +72,47 @@ namespace HMSBackend.Controllers
         // ... rest of the code ...
 
         // Method to generate JWT token
-        private string GenerateJwtToken(int userId, string userName)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.Name, userName),
-                    new Claim("UserId", userId.ToString()) // Add UserId claim
-                }),
-                Expires = DateTime.UtcNow.AddDays(7),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
-        }
+        //private string GenerateJwtToken(int userId, string userName)
+        //{
+        //    var tokenHandler = new JwtSecurityTokenHandler();
+        //    var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
+        //    var tokenDescriptor = new SecurityTokenDescriptor
+        //    {
+        //        Subject = new ClaimsIdentity(new[]
+        //        {
+        //            new Claim(ClaimTypes.Name, userName),
+        //            new Claim("UserId", userId.ToString()) // Add UserId claim
+        //        }),
+        //        Expires = DateTime.UtcNow.AddDays(7),
+        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        //    };
+        //    var token = tokenHandler.CreateToken(tokenDescriptor);
+        //    return tokenHandler.WriteToken(token);
+        //}
+
+        private string GenerateJwtToken(int userId, string userName, string email, bool isDefault)
+{
+    var tokenHandler = new JwtSecurityTokenHandler();
+    var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
+    
+    var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Name, userName),
+        new Claim("UserId", userId.ToString()),
+        new Claim(ClaimTypes.Email, email)
+    };
+    
+    var tokenDescriptor = new SecurityTokenDescriptor
+    {
+        Subject = new ClaimsIdentity(claims),
+        Expires = DateTime.UtcNow.AddDays(7),
+        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+    };
+    
+    var token = tokenHandler.CreateToken(tokenDescriptor);
+    return tokenHandler.WriteToken(token);
+}
+
 
         //Password Change
         

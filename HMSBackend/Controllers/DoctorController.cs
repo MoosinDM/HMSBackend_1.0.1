@@ -24,9 +24,9 @@ namespace HMSBackend.Controllers
         }
 
         ////Server side paging and sorting
-        [HttpGet]
+        [HttpPost]
         [Route("doctor/fetchAll")]
-        public ActionResult<IEnumerable<Doctor>> GetDoctor()
+        public ActionResult<IEnumerable<Doctor>> PostDoctor(FilterCriteria filterCriteria)
         {
             try
             {
@@ -46,7 +46,10 @@ namespace HMSBackend.Controllers
                             ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
                         FROM doctor_table
                     ) AS Subquery
-                    WHERE RowNumber BETWEEN @StartRow AND @EndRow";
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow OR "+
+                    "doctor_id LIKE '%' + @doctor_id + '%' OR " +
+                                   "      name LIKE '%' + @name + '%' OR " +
+                                   "specialist LIKE '%' + @specialist + '%'";
 
                     int startRow = (page - 1) * pageSize + 1;
                     int endRow = page * pageSize;
@@ -54,6 +57,10 @@ namespace HMSBackend.Controllers
                     SqlCommand cmd = new SqlCommand(sqlQuery, con);
                     cmd.Parameters.AddWithValue("@StartRow", startRow);
                     cmd.Parameters.AddWithValue("@EndRow", endRow);
+                    cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
+                    cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
+                    //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
+                    cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
 
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Doctor> doctorList = new List<Doctor>();
@@ -202,66 +209,66 @@ namespace HMSBackend.Controllers
             }
         }
 
-        [HttpPost]
-        [Route("doctor/filter")]
-        public ActionResult<IEnumerable<Doctor>> PostFilterData(FilterCriteria filterCriteria)
-        {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-                {
-                    con.Open();
+        //[HttpPost]
+        //[Route("doctor/filter")]
+        //public ActionResult<IEnumerable<Doctor>> PostFilterData(FilterCriteria filterCriteria)
+        //{
+        //    try
+        //    {
+        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+        //        {
+        //            con.Open();
 
-                    string query = "SELECT doctor_id, name, mobile, email, qualification, address, specialist " +
-                                   "FROM doctor_table " +
-                                   "WHERE doctor_id LIKE '%' + @doctor_id + '%' OR " +
-                                   "      name LIKE '%' + @name + '%' OR " +
-                                   "specialist LIKE '%' + @specialist + '%'";
+        //            string query = "SELECT doctor_id, name, mobile, email, qualification, address, specialist " +
+        //                           "FROM doctor_table " +
+        //                           "WHERE doctor_id LIKE '%' + @doctor_id + '%' OR " +
+        //                           "      name LIKE '%' + @name + '%' OR " +
+        //                           "specialist LIKE '%' + @specialist + '%'";
 
-                    SqlCommand cmd = new SqlCommand(query, con);
-                    cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
-                    cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
-                    //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
-                    cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
+        //            SqlCommand cmd = new SqlCommand(query, con);
+        //            cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
+        //            cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
+        //            //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
+        //            cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
 
-                    SqlDataReader reader = cmd.ExecuteReader();
+        //            SqlDataReader reader = cmd.ExecuteReader();
 
-                    List<Doctor> doctors = new List<Doctor>();
+        //            List<Doctor> doctors = new List<Doctor>();
 
-                    while (reader.Read())
-                    {
-                        Doctor doctor = new Doctor
-                        {
-                            doctor_id = reader["doctor_id"] as string,
-                            name = reader["name"] as string,
-                            mob_no = reader["mobile"] as string,
-                            email = reader["email"] as string,
-                            qualification = reader["qualification"] as string,
-                            address = reader["address"] as string,
-                            specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
-                        };
+        //            while (reader.Read())
+        //            {
+        //                Doctor doctor = new Doctor
+        //                {
+        //                    doctor_id = reader["doctor_id"] as string,
+        //                    name = reader["name"] as string,
+        //                    mob_no = reader["mobile"] as string,
+        //                    email = reader["email"] as string,
+        //                    qualification = reader["qualification"] as string,
+        //                    address = reader["address"] as string,
+        //                    specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
+        //                };
 
-                        doctors.Add(doctor);
-                    }
+        //                doctors.Add(doctor);
+        //            }
 
-                    reader.Close();
-                    return Ok(doctors);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: " + ex.Message);
+        //            reader.Close();
+        //            return Ok(doctors);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("Error: " + ex.Message);
 
-                var errorResponse = new
-                {
-                    status = 500,
-                    message = "An error occurred: " + ex.Message
-                };
+        //        var errorResponse = new
+        //        {
+        //            status = 500,
+        //            message = "An error occurred: " + ex.Message
+        //        };
 
-                return StatusCode(500, errorResponse);
-            }
+        //        return StatusCode(500, errorResponse);
+        //    }
 
-        }
+        //}
 
 
 

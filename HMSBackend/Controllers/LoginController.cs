@@ -49,18 +49,15 @@ namespace HMSBackend.Controllers
                     string userName = dt.Rows[0]["name"].ToString();
                     string userEmail = dt.Rows[0]["email"].ToString();
                     bool isDefault = Convert.ToBoolean(dt.Rows[0]["is_default"]);
+                    string mob_no = (string)dt.Rows[0]["mob_no"];
 
                     // Generate JWT token
-                    var token = GenerateJwtToken(userId, userName, userEmail, isDefault);
+                    var token = GenerateJwtToken(userId, userName, userEmail, isDefault, mob_no);
 
                     // Return user details and token as response
                     return Ok(new
                     {
-                        Id = userId,
-                        Name = userName,
-                        Email = userEmail,
-                        Token = token,
-                        IsDefault = isDefault
+                        Token = token
                     });
                 }
             }
@@ -90,32 +87,59 @@ namespace HMSBackend.Controllers
         //    return tokenHandler.WriteToken(token);
         //}
 
-        private string GenerateJwtToken(int userId, string userName, string email, bool isDefault)
-{
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
-    
-    var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, userName),
-        new Claim("UserId", userId.ToString()),
-        new Claim(ClaimTypes.Email, email)
-    };
-    
-    var tokenDescriptor = new SecurityTokenDescriptor
-    {
-        Subject = new ClaimsIdentity(claims),
-        Expires = DateTime.UtcNow.AddDays(7),
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-    };
-    
-    var token = tokenHandler.CreateToken(tokenDescriptor);
-    return tokenHandler.WriteToken(token);
-}
+        //private string GenerateJwtToken(int userId, string userName, string email, bool isDefault)
+        //{
+        //    var tokenHandler = new JwtSecurityTokenHandler();
+        //    var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
+
+        //    var claims = new List<Claim>
+        //    {
+        //        new Claim(ClaimTypes.Name, userName),
+        //        new Claim("UserId", userId.ToString()),
+        //        new Claim(ClaimTypes.Email, email),
+        //        new Claim(ClaimTypes.isDefault, isDefault)
+        //    };
+
+        //    var tokenDescriptor = new SecurityTokenDescriptor
+        //    {
+        //        Subject = new ClaimsIdentity(claims),
+        //        Expires = DateTime.UtcNow.AddDays(7),
+        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        //    };
+
+        //    var token = tokenHandler.CreateToken(tokenDescriptor);
+        //    return tokenHandler.WriteToken(token);
+        //}
+
+        private string GenerateJwtToken(int userId, string userName, string email, bool isDefault, string mob_no)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
+
+            var claims = new List<Claim>
+            {
+                new Claim("Name", userName),
+                new Claim("UserId", userId.ToString()),
+                new Claim("Email", email),
+                new Claim("isDefault", isDefault.ToString()), // Convert bool to string
+                new Claim("MobilePhone", mob_no)
+            };
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+
 
 
         //Password Change
-        
+
         [HttpPatch]
         [Route("password/change/{id}")]
         public async Task<ActionResult> ResetPassword(int id, ResetPassword reset)
@@ -155,10 +179,6 @@ namespace HMSBackend.Controllers
                 return StatusCode(500, $"An error occurred while resetting the password. Error: {ex.Message}");
             }
         }
-
-
-
-
     }
 }
 

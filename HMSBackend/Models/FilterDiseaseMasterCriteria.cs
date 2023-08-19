@@ -1,9 +1,8 @@
 ﻿namespace HMSBackend.Models
 {
-    public class FilterPatientHistCriteria
+    public class FilterDiseaseMasterCriteria
     {
-        public string patient_hist_id { get; set; }
-        public string patient_id { get; set; }
+        public string disease_id { get; set; }
         public int page { get; set; }
         public int pageSize { get; set; }
         public string order { get; set; }

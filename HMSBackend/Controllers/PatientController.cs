@@ -30,10 +30,10 @@ namespace HMSBackend.Controllers
 
             try
             {
-                int page = Convert.ToInt32(Request.Query["page"]);
-                int pageSize = Convert.ToInt32(Request.Query["pageSize"]);
-                string sortBy = Request.Query["sortBy"];
-                string order = Request.Query["order"];
+                int page = filterCriteria.page;
+                int pageSize = filterCriteria.pageSize;
+                string sortBy = filterCriteria.sortBy;
+                string order = filterCriteria.order;
 
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
@@ -46,8 +46,8 @@ namespace HMSBackend.Controllers
                             ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
                         FROM patient_table
                     ) AS Subquery
-                    WHERE RowNumber BETWEEN @StartRow AND @EndRow OR "+
-                    "patient_id LIKE '%' + @patient_id + '%' OR " +
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND "+
+                    "patient_id LIKE '%' + @patient_id + '%' AND " +
                                    "      name LIKE '%' + @name + '%' ";
 
                     int startRow = (page - 1) * pageSize + 1;
@@ -267,12 +267,17 @@ namespace HMSBackend.Controllers
             List<Patient_hist> patient_hist = new List<Patient_hist>();
             try
             {
+                int page = filterPatientHistCriteria.page;
+                int pageSize = filterPatientHistCriteria.pageSize;
+                string sortBy = filterPatientHistCriteria.sortBy;
+                string order = filterPatientHistCriteria.order;
+
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    string sqlQuery = "SELECT * " +
+                    string sqlQuery = "SELECT *, ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber " +
                                    "FROM patient_history_table " +
-                                   "WHERE patient_hist_id LIKE '%' + @patient_hist_id + '%' OR " +
+                                   "WHERE patient_hist_id LIKE '%' + @patient_hist_id + '%' AND " +
                                    "      patient_id LIKE '%' + @patient_id + '%' ";
                     SqlCommand cmd = new SqlCommand(sqlQuery, con);
                     cmd.Parameters.AddWithValue("@patient_hist_id", filterPatientHistCriteria.patient_hist_id);

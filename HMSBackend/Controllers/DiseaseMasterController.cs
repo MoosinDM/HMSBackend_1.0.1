@@ -16,16 +16,24 @@ namespace HMSBackend.Controllers
         {
             _configuration = configuration;
         }
-        [HttpGet]
+        [HttpPost]
         [Route("diseasemaster/fetchAll")]
-        public ActionResult<string> GetDiseaseMaster()
+        public ActionResult<string> GetDiseaseMaster(FilterDiseaseMasterCriteria filterCriteria)
         {
             try
             {
+                int page = filterCriteria.page;
+                int pageSize = filterCriteria.pageSize;
+                string sortBy = filterCriteria.sortBy;
+                string order = filterCriteria.order;
+
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("SELECT * FROM disease_master", con);
+                    SqlCommand cmd = new SqlCommand($"SELECT *, ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber " +
+                                   "FROM disease_master " +
+                                   "WHERE disease_id LIKE '%' + @disease_id + '%' ", con);
+                    cmd.Parameters.AddWithValue("@disease_id", filterCriteria.disease_id);
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Disease_master> diseaseList = new List<Disease_master>();
                     while (reader.Read())

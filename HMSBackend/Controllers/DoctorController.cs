@@ -28,12 +28,69 @@ namespace HMSBackend.Controllers
         [Route("doctor/fetchAll")]
         public ActionResult<IEnumerable<Doctor>> PostDoctor(FilterCriteria filterCriteria)
         {
+            //try
+            //{
+            //    int page = Convert.ToInt32(Request.Query["page"]);
+            //    int pageSize = Convert.ToInt32(Request.Query["pageSize"]);
+            //    string sortBy = Request.Query["sortBy"];
+            //    string order = Request.Query["order"];
+
+            //    using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+            //    {
+            //        con.Open();
+
+            //        string sqlQuery = $@"
+            //        SELECT doctor_id, name, mobile, email, specialist, qualification, address
+            //        FROM (
+            //            SELECT *,
+            //                ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
+            //            FROM doctor_table
+            //        ) AS Subquery
+            //        WHERE RowNumber BETWEEN @StartRow AND @EndRow OR "+
+            //        "doctor_id LIKE '%' + @doctor_id + '%' OR " +
+            //                       "      name LIKE '%' + @name + '%' OR " +
+            //                       "specialist LIKE '%' + @specialist + '%'";
+
+            //        int startRow = (page - 1) * pageSize + 1;
+            //        int endRow = page * pageSize;
+
+            //        SqlCommand cmd = new SqlCommand(sqlQuery, con);
+            //        cmd.Parameters.AddWithValue("@StartRow", startRow);
+            //        cmd.Parameters.AddWithValue("@EndRow", endRow);
+            //        cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
+            //        cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
+            //        //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
+            //        cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
+
+            //        SqlDataReader reader = cmd.ExecuteReader();
+            //        List<Doctor> doctorList = new List<Doctor>();
+            //        while (reader.Read())
+            //        {
+            //            Doctor doctor = new Doctor
+            //            {
+            //                doctor_id = reader["doctor_id"] as string,
+            //                name = reader["name"] as string,
+            //                mob_no = reader["mobile"] as string,
+            //                email = reader["email"] as string,
+            //                qualification = reader["qualification"] as string,
+            //                address = reader["address"] as string,
+            //                // Fetch the specialist data and parse it as a string array
+            //                specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
+            //            };
+
+            //            doctorList.Add(doctor);
+            //        }
+            //        reader.Close();
+
+            //        return Ok(doctorList);
+            //    }
+            //}
             try
             {
-                int page = Convert.ToInt32(Request.Query["page"]);
-                int pageSize = Convert.ToInt32(Request.Query["pageSize"]);
-                string sortBy = Request.Query["sortBy"];
-                string order = Request.Query["order"];
+                int page = Convert.ToInt32(filterCriteria.page);
+                int pageSize = Convert.ToInt32(filterCriteria.pageSize);
+                string sortBy = filterCriteria.sortBy;
+                string order = filterCriteria.order;
 
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
@@ -46,9 +103,9 @@ namespace HMSBackend.Controllers
                             ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
                         FROM doctor_table
                     ) AS Subquery
-                    WHERE RowNumber BETWEEN @StartRow AND @EndRow OR "+
-                    "doctor_id LIKE '%' + @doctor_id + '%' OR " +
-                                   "      name LIKE '%' + @name + '%' OR " +
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
+                    "doctor_id LIKE '%' + @doctor_id + '%' AND " +
+                                   "      name LIKE '%' + @name + '%' AND " +
                                    "specialist LIKE '%' + @specialist + '%'";
 
                     int startRow = (page - 1) * pageSize + 1;
@@ -91,8 +148,6 @@ namespace HMSBackend.Controllers
             }
 
         }
-
-
 
 
         //POST

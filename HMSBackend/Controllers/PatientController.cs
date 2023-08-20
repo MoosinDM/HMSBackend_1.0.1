@@ -6,6 +6,7 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.SignalR.Protocol;
+using System.Data;
 
 namespace HMSBackend.Controllers
 {
@@ -227,6 +228,7 @@ namespace HMSBackend.Controllers
                 //string order = Request.Query["order"];
                 string sortByColumn = !string.IsNullOrEmpty(filterPatientHistCriteria.sortBy) ? filterPatientHistCriteria.sortBy : "patient_hist_id";
                 string sortOrder = !string.IsNullOrEmpty(filterPatientHistCriteria.order) ? filterPatientHistCriteria.order.ToUpper() : "ASC"; // Default to ascending order
+                string patient_type = !string.IsNullOrEmpty(filterPatientHistCriteria.patient_type) ? filterPatientHistCriteria.patient_type : "OPD";
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
@@ -237,7 +239,7 @@ namespace HMSBackend.Controllers
                             ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
                         FROM patient_history_table
                     ) AS Subquery
-                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
+                    WHERE patient_type = @patient_type AND RowNumber BETWEEN @StartRow AND @EndRow AND " +
                     "patient_hist_id LIKE '%' + @patient_hist_id + '%' AND" +
                     " patient_id LIKE '%' + @patient_id + '%'";
 
@@ -249,6 +251,7 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@EndRow", endRow);
                     cmd.Parameters.AddWithValue("@patient_hist_id", filterPatientHistCriteria.patient_hist_id);
                     cmd.Parameters.AddWithValue("@patient_id", "%" + filterPatientHistCriteria.patient_id + "%");
+                    cmd.Parameters.AddWithValue("@patient_type", patient_type);
                     SqlDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
@@ -279,6 +282,7 @@ namespace HMSBackend.Controllers
             }
 
         }
+
 
         [HttpPost]
         [Route("patient_hist/create")]

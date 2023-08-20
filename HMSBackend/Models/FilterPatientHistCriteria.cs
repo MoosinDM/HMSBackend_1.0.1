@@ -8,5 +8,6 @@
         public int pageSize { get; set; }
         public string order { get; set; }
         public string sortBy { get; set; }
+        public string patient_type { get; set; }
     }
 }

@@ -28,63 +28,6 @@ namespace HMSBackend.Controllers
         [Route("doctor/fetchAll")]
         public ActionResult<IEnumerable<Doctor>> PostDoctor(FilterCriteria filterCriteria)
         {
-            //try
-            //{
-            //    int page = Convert.ToInt32(Request.Query["page"]);
-            //    int pageSize = Convert.ToInt32(Request.Query["pageSize"]);
-            //    string sortBy = Request.Query["sortBy"];
-            //    string order = Request.Query["order"];
-
-            //    using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-            //    {
-            //        con.Open();
-
-            //        string sqlQuery = $@"
-            //        SELECT doctor_id, name, mobile, email, specialist, qualification, address
-            //        FROM (
-            //            SELECT *,
-            //                ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
-            //            FROM doctor_table
-            //        ) AS Subquery
-            //        WHERE RowNumber BETWEEN @StartRow AND @EndRow OR "+
-            //        "doctor_id LIKE '%' + @doctor_id + '%' OR " +
-            //                       "      name LIKE '%' + @name + '%' OR " +
-            //                       "specialist LIKE '%' + @specialist + '%'";
-
-            //        int startRow = (page - 1) * pageSize + 1;
-            //        int endRow = page * pageSize;
-
-            //        SqlCommand cmd = new SqlCommand(sqlQuery, con);
-            //        cmd.Parameters.AddWithValue("@StartRow", startRow);
-            //        cmd.Parameters.AddWithValue("@EndRow", endRow);
-            //        cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
-            //        cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
-            //        //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
-            //        cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
-
-            //        SqlDataReader reader = cmd.ExecuteReader();
-            //        List<Doctor> doctorList = new List<Doctor>();
-            //        while (reader.Read())
-            //        {
-            //            Doctor doctor = new Doctor
-            //            {
-            //                doctor_id = reader["doctor_id"] as string,
-            //                name = reader["name"] as string,
-            //                mob_no = reader["mobile"] as string,
-            //                email = reader["email"] as string,
-            //                qualification = reader["qualification"] as string,
-            //                address = reader["address"] as string,
-            //                // Fetch the specialist data and parse it as a string array
-            //                specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
-            //            };
-
-            //            doctorList.Add(doctor);
-            //        }
-            //        reader.Close();
-
-            //        return Ok(doctorList);
-            //    }
-            //}
             try
             {
                 int page = Convert.ToInt32(filterCriteria.page);
@@ -192,12 +135,54 @@ namespace HMSBackend.Controllers
 
         }
 
+        //[HttpPut]
+        //[Route("doctor/update/{id}")]
+        //public ActionResult<string> PutDoctorData(string id, Doctor doctorDetails)
+        //{
+        //    try
+        //    {
+        //        string specialistJson = JsonConvert.SerializeObject(doctorDetails.specialist);
+
+        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+        //        {
+        //            con.Open();
+        //            SqlCommand cmd = new SqlCommand("UPDATE doctor_table SET name = @name, mobile = @mob_no, specialist = @specialist, email = @email, qualification = @qualification, address = @address WHERE doctor_id = @id", con);
+        //            cmd.Parameters.AddWithValue("@id", id);
+        //            cmd.Parameters.AddWithValue("@name", doctorDetails.name);
+        //            cmd.Parameters.AddWithValue("@mob_no", doctorDetails.mob_no);
+        //            cmd.Parameters.AddWithValue("@specialist", specialistJson);
+        //            cmd.Parameters.AddWithValue("@email", doctorDetails.email);
+        //            cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);
+        //            cmd.Parameters.AddWithValue("@address", doctorDetails.address);
+
+        //            int i = cmd.ExecuteNonQuery();
+        //            cmd.Dispose();
+
+        //            if (i > 0)
+        //            {
+        //                return Ok(new { message = "Doctor has been updated" });
+        //            }
+        //            else
+        //            {
+        //                return BadRequest(new { message = "Error" });
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+        //    }
+
+        //}
+
+
         [HttpPut]
-        [Route("doctor/update/{id}")]
-        public ActionResult<string> PutDoctorData(string id, Doctor doctorDetails)
+        [Route("doctor/update")]
+        public ActionResult<string> PutDoctorData(Doctor doctorDetails)
         {
             try
             {
+                string id = doctorDetails.doctor_id;
                 string specialistJson = JsonConvert.SerializeObject(doctorDetails.specialist);
 
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
@@ -232,6 +217,7 @@ namespace HMSBackend.Controllers
 
         }
 
+
         [HttpDelete]
         [Route("doctor/delete")]
         public ActionResult<string> DeleteDoctorData(string id)
@@ -263,69 +249,6 @@ namespace HMSBackend.Controllers
                 return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
         }
-
-        //[HttpPost]
-        //[Route("doctor/filter")]
-        //public ActionResult<IEnumerable<Doctor>> PostFilterData(FilterCriteria filterCriteria)
-        //{
-        //    try
-        //    {
-        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-        //        {
-        //            con.Open();
-
-        //            string query = "SELECT doctor_id, name, mobile, email, qualification, address, specialist " +
-        //                           "FROM doctor_table " +
-        //                           "WHERE doctor_id LIKE '%' + @doctor_id + '%' OR " +
-        //                           "      name LIKE '%' + @name + '%' OR " +
-        //                           "specialist LIKE '%' + @specialist + '%'";
-
-        //            SqlCommand cmd = new SqlCommand(query, con);
-        //            cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
-        //            cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
-        //            //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
-        //            cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
-
-        //            SqlDataReader reader = cmd.ExecuteReader();
-
-        //            List<Doctor> doctors = new List<Doctor>();
-
-        //            while (reader.Read())
-        //            {
-        //                Doctor doctor = new Doctor
-        //                {
-        //                    doctor_id = reader["doctor_id"] as string,
-        //                    name = reader["name"] as string,
-        //                    mob_no = reader["mobile"] as string,
-        //                    email = reader["email"] as string,
-        //                    qualification = reader["qualification"] as string,
-        //                    address = reader["address"] as string,
-        //                    specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
-        //                };
-
-        //                doctors.Add(doctor);
-        //            }
-
-        //            reader.Close();
-        //            return Ok(doctors);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine("Error: " + ex.Message);
-
-        //        var errorResponse = new
-        //        {
-        //            status = 500,
-        //            message = "An error occurred: " + ex.Message
-        //        };
-
-        //        return StatusCode(500, errorResponse);
-        //    }
-
-        //}
-
-
 
     }
 }

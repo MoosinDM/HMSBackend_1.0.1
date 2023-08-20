@@ -30,25 +30,27 @@ namespace HMSBackend.Controllers
 
             try
             {
-                int page = filterCriteria.page;
-                int pageSize = filterCriteria.pageSize;
-                string sortBy = filterCriteria.sortBy;
-                string order = filterCriteria.order;
+                int page = Convert.ToInt32(filterCriteria.page);
+                int pageSize = Convert.ToInt32(filterCriteria.pageSize);
+                //string sortBy = Request.Query["sortBy"];
+                //string order = Request.Query["order"];
+                string sortByColumn = !string.IsNullOrEmpty(filterCriteria.sortBy) ? filterCriteria.sortBy : "patient_id";
+                string sortOrder = !string.IsNullOrEmpty(filterCriteria.order) ? filterCriteria.order.ToUpper() : "ASC"; // Default to ascending order
 
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
 
-                    string sqlQuery = $@"
+                    string sqlQuery =$@"
                     SELECT *
                     FROM (
                         SELECT *,
-                            ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
+                            ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
                         FROM patient_table
                     ) AS Subquery
-                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND "+
-                    "patient_id LIKE '%' + @patient_id + '%' AND " +
-                                   "      name LIKE '%' + @name + '%' ";
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
+                    "patient_id LIKE '%' + @patient_id + '%' AND" +
+                    " name LIKE '%' + @name + '%'";
 
                     int startRow = (page - 1) * pageSize + 1;
                     int endRow = page * pageSize;
@@ -133,11 +135,13 @@ namespace HMSBackend.Controllers
 
 
         [HttpPut]
-        [Route("patient/update/{id}")]
-        public ActionResult<string> PutPatientData(string id, Patient patient)
+        [Route("patient/update")]
+        public ActionResult<string> PutPatientData(Patient patient)
         {
             try
             {
+                string id = patient.patient_id;
+
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
@@ -173,7 +177,7 @@ namespace HMSBackend.Controllers
 
 
         [HttpDelete]
-        [Route("patient/delete/{id}")]
+        [Route("patient/delete")]
         public ActionResult<string> DeletePatientData(string id)
         {
             try
@@ -206,56 +210,6 @@ namespace HMSBackend.Controllers
         }
 
 
-        //[HttpPost]
-        //[Route("patient/filter")]
-        //public ActionResult<IEnumerable<Patient>> PostFilterData(FilterPatientCriteria filterCriteria)
-        //{
-        //    try
-        //    {
-        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-        //        {
-        //            con.Open();
-
-        //            string query = "SELECT * " +
-        //                           "FROM patient_table " +
-        //                           "WHERE patient_id LIKE '%' + @patient_id + '%' OR " +
-        //                           "      name LIKE '%' + @name + '%' ";
-
-        //            SqlCommand cmd = new SqlCommand(query, con);
-        //            cmd.Parameters.AddWithValue("@patient_id", filterCriteria.patient_id);
-        //            cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
-
-        //            SqlDataReader reader = cmd.ExecuteReader();
-
-        //            List<Patient> patients = new List<Patient>();
-
-        //            while (reader.Read())
-        //            {
-        //                Patient patient = new Patient
-        //                {
-        //                    patient_id = reader["patient_id"] as string,
-        //                    name = reader["name"] as string,
-        //                    mobile = reader["mobile"] as string,
-        //                    email = reader["email"] as string,
-        //                    age = (int)reader["age"],
-        //                    gender = reader["gender"] as string, // Correct the column name
-        //                    doctor_id = reader["doctor_id"] as string,
-        //                    created_by = reader["created_by"] as string
-        //                };
-
-        //                patients.Add(patient);
-        //            }
-        //            reader.Close();
-        //            return Ok(patients);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { error = "An error occurred", message = ex.Message });
-        //    }
-
-        //}
-
 
         
         /// Patient History API and CRUD Operations
@@ -267,19 +221,32 @@ namespace HMSBackend.Controllers
             List<Patient_hist> patient_hist = new List<Patient_hist>();
             try
             {
-                int page = filterPatientHistCriteria.page;
-                int pageSize = filterPatientHistCriteria.pageSize;
-                string sortBy = filterPatientHistCriteria.sortBy;
-                string order = filterPatientHistCriteria.order;
-
+                int page = Convert.ToInt32(filterPatientHistCriteria.page);
+                int pageSize = Convert.ToInt32(filterPatientHistCriteria.pageSize);
+                //string sortBy = Request.Query["sortBy"];
+                //string order = Request.Query["order"];
+                string sortByColumn = !string.IsNullOrEmpty(filterPatientHistCriteria.sortBy) ? filterPatientHistCriteria.sortBy : "patient_hist_id";
+                string sortOrder = !string.IsNullOrEmpty(filterPatientHistCriteria.order) ? filterPatientHistCriteria.order.ToUpper() : "ASC"; // Default to ascending order
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    string sqlQuery = "SELECT *, ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber " +
-                                   "FROM patient_history_table " +
-                                   "WHERE patient_hist_id LIKE '%' + @patient_hist_id + '%' AND " +
-                                   "      patient_id LIKE '%' + @patient_id + '%' ";
+                    string sqlQuery = $@"
+                    SELECT *
+                    FROM (
+                        SELECT *,
+                            ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
+                        FROM patient_history_table
+                    ) AS Subquery
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
+                    "patient_hist_id LIKE '%' + @patient_hist_id + '%' AND" +
+                    " patient_id LIKE '%' + @patient_id + '%'";
+
+                    int startRow = (page - 1) * pageSize + 1;
+                    int endRow = page * pageSize;
+
                     SqlCommand cmd = new SqlCommand(sqlQuery, con);
+                    cmd.Parameters.AddWithValue("@StartRow", startRow);
+                    cmd.Parameters.AddWithValue("@EndRow", endRow);
                     cmd.Parameters.AddWithValue("@patient_hist_id", filterPatientHistCriteria.patient_hist_id);
                     cmd.Parameters.AddWithValue("@patient_id", "%" + filterPatientHistCriteria.patient_id + "%");
                     SqlDataReader reader = cmd.ExecuteReader();
@@ -312,45 +279,6 @@ namespace HMSBackend.Controllers
             }
 
         }
-
-        //[HttpPost]
-        //[Route("patient_hist/create")]
-        //public ActionResult<string> PostPatient_hist(Patient_hist patient_Hist)
-        //{
-        //    try
-        //    {
-        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-        //        {
-        //            con.Open();
-        //            SqlCommand cmd = new SqlCommand("INSERT INTO patient_history_table(patient_hist_id, patient_id, patient_type, treatment_type, doctor_id, specialist, details, comment, created_by) VALUES(@patient_hist_id, @patient_id, @patient_type, @treatment_type, @doctor_id, @specialist, @details, @comment, @created_by)");
-        //            cmd.Parameters.AddWithValue("@patient_hist_id", patient_Hist.patient_hist_id);
-        //            cmd.Parameters.AddWithValue("@patient_id", patient_Hist.patient_id);
-        //            cmd.Parameters.AddWithValue("@patient_type", patient_Hist.patient_type);
-        //            cmd.Parameters.AddWithValue("@teatment_type", patient_Hist.treatment_type);
-        //            cmd.Parameters.AddWithValue("@doctor_id", patient_Hist.doctor_id);
-        //            cmd.Parameters.AddWithValue("@specialist", patient_Hist.specialist);
-        //            cmd.Parameters.AddWithValue("@details", patient_Hist.patient_description);
-        //            cmd.Parameters.AddWithValue("@comment", patient_Hist.comment);
-        //            cmd.Parameters.AddWithValue("@created_by", patient_Hist.created_by);
-
-        //            int i = cmd.ExecuteNonQuery();
-        //            cmd.Dispose();
-
-        //            if (i > 0)
-        //            {
-        //                return Ok(new { message = "Patient created successfully" });
-        //            }
-        //            else
-        //            {
-        //                return BadRequest(new { message = "Error" });
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { error = "An error occurred", message = ex.Message });
-        //    }
-        //}
 
         [HttpPost]
         [Route("patient_hist/create")]
@@ -393,11 +321,13 @@ namespace HMSBackend.Controllers
 
 
         [HttpPut]
-        [Route("patient_hist/update/{id}")]
-        public ActionResult<string> PutPatienthist(string id, Patient_hist patient_Hist)
+        [Route("patient_hist/update")]
+        public ActionResult<string> PutPatienthist(Patient_hist patient_Hist)
         {
             try
             {
+                string id = patient_Hist.patient_hist_id;
+
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
@@ -430,52 +360,6 @@ namespace HMSBackend.Controllers
                 return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
         }
-
-        //[HttpPost]
-        //[Route("patient_hist/filter")]
-        //public ActionResult<string> PostPatienthistFilter(FilterPatientHistCriteria filterPatientHistCriteria)
-        //{
-        //    using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-        //    {
-        //        con.Open();
-        //        string query = "SELECT * " +
-        //                           "FROM patient_history_table " +
-        //                           "WHERE patient_hist_id LIKE '%' + @patient_hist_id + '%' OR " +
-        //                           "      patient_id LIKE '%' + @patient_id + '%' ";
-
-        //        SqlCommand cmd = new SqlCommand(query, con);
-        //        cmd.Parameters.AddWithValue("@patient_hist_id", filterPatientHistCriteria.patient_hist_id);
-        //        cmd.Parameters.AddWithValue("@patient_id", "%" + filterPatientHistCriteria.patient_id + "%");
-
-        //        SqlDataReader reader = cmd.ExecuteReader();
-
-        //        List<Patient_hist> patients = new List<Patient_hist>();
-
-        //        while (reader.Read())
-        //        {
-        //            Patient_hist patient_hist = new Patient_hist
-        //            {
-        //                patient_hist_id = reader["patient_hist_id"] as string,
-        //                date = (DateTime)reader["date"],
-        //                patient_type = reader["patient_type"] as string,
-        //                patient_id = reader["patient_id"] as string,
-        //                treatment_type = reader["treatment_type"] as string,
-        //                specialist = reader["specialist"] as string,
-        //                patient_description = reader["patient_description"] as string,
-        //                comment = reader["comment"] as string,
-        //                doctor_id = reader["doctor_id"] as string,
-        //                created_by = reader["created_by"] as string
-        //            };
-
-        //            patients.Add(patient_hist);
-        //        }
-        //        reader.Close();
-        //        return Ok(patients);
-
-
-
-        //    }
-        //}
 
     }
 }

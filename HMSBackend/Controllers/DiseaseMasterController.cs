@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Newtonsoft.Json.Linq;
+using System.Globalization;
 
 namespace HMSBackend.Controllers
 {
@@ -22,18 +23,30 @@ namespace HMSBackend.Controllers
         {
             try
             {
-                int page = filterCriteria.page;
-                int pageSize = filterCriteria.pageSize;
-                string sortBy = filterCriteria.sortBy;
-                string order = filterCriteria.order;
-
+                int page = Convert.ToInt32(filterCriteria.page);
+                int pageSize = Convert.ToInt32(filterCriteria.pageSize);
+                string sortByColumn = !string.IsNullOrEmpty(filterCriteria.sortBy) ? filterCriteria.sortBy : "disease_id";
+                string sortOrder = !string.IsNullOrEmpty(filterCriteria.order) ? filterCriteria.order.ToUpper() : "ASC"; // Default to ascending order
+      
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand($"SELECT *, ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber " +
-                                   "FROM disease_master " +
-                                   "WHERE disease_id LIKE '%' + @disease_id + '%' ", con);
+                    string query = $@"
+                    SELECT *
+                    FROM (
+                        SELECT *,
+                            ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
+                        FROM disease_master
+                    ) AS Subquery
+                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
+                    "disease_id LIKE '%' + @disease_id + '%' ";
+                    int startRow = (page - 1) * pageSize + 1;
+                    int endRow = page * pageSize;
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@StartRow", startRow);
+                    cmd.Parameters.AddWithValue("@EndRow", endRow);
                     cmd.Parameters.AddWithValue("@disease_id", filterCriteria.disease_id);
+
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Disease_master> diseaseList = new List<Disease_master>();
                     while (reader.Read())

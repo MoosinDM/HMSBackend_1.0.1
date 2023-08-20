@@ -66,51 +66,6 @@ namespace HMSBackend.Controllers
             return BadRequest("Invalid user");
         }
 
-        // ... rest of the code ...
-
-        // Method to generate JWT token
-        //private string GenerateJwtToken(int userId, string userName)
-        //{
-        //    var tokenHandler = new JwtSecurityTokenHandler();
-        //    var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
-        //    var tokenDescriptor = new SecurityTokenDescriptor
-        //    {
-        //        Subject = new ClaimsIdentity(new[]
-        //        {
-        //            new Claim(ClaimTypes.Name, userName),
-        //            new Claim("UserId", userId.ToString()) // Add UserId claim
-        //        }),
-        //        Expires = DateTime.UtcNow.AddDays(7),
-        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-        //    };
-        //    var token = tokenHandler.CreateToken(tokenDescriptor);
-        //    return tokenHandler.WriteToken(token);
-        //}
-
-        //private string GenerateJwtToken(int userId, string userName, string email, bool isDefault)
-        //{
-        //    var tokenHandler = new JwtSecurityTokenHandler();
-        //    var key = Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]);
-
-        //    var claims = new List<Claim>
-        //    {
-        //        new Claim(ClaimTypes.Name, userName),
-        //        new Claim("UserId", userId.ToString()),
-        //        new Claim(ClaimTypes.Email, email),
-        //        new Claim(ClaimTypes.isDefault, isDefault)
-        //    };
-
-        //    var tokenDescriptor = new SecurityTokenDescriptor
-        //    {
-        //        Subject = new ClaimsIdentity(claims),
-        //        Expires = DateTime.UtcNow.AddDays(7),
-        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-        //    };
-
-        //    var token = tokenHandler.CreateToken(tokenDescriptor);
-        //    return tokenHandler.WriteToken(token);
-        //}
-
         private string GenerateJwtToken(int userId, string userName, string email, bool isDefault, string mob_no)
         {
             var tokenHandler = new JwtSecurityTokenHandler();

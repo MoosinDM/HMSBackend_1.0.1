@@ -135,47 +135,6 @@ namespace HMSBackend.Controllers
 
         }
 
-        //[HttpPut]
-        //[Route("doctor/update/{id}")]
-        //public ActionResult<string> PutDoctorData(string id, Doctor doctorDetails)
-        //{
-        //    try
-        //    {
-        //        string specialistJson = JsonConvert.SerializeObject(doctorDetails.specialist);
-
-        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
-        //        {
-        //            con.Open();
-        //            SqlCommand cmd = new SqlCommand("UPDATE doctor_table SET name = @name, mobile = @mob_no, specialist = @specialist, email = @email, qualification = @qualification, address = @address WHERE doctor_id = @id", con);
-        //            cmd.Parameters.AddWithValue("@id", id);
-        //            cmd.Parameters.AddWithValue("@name", doctorDetails.name);
-        //            cmd.Parameters.AddWithValue("@mob_no", doctorDetails.mob_no);
-        //            cmd.Parameters.AddWithValue("@specialist", specialistJson);
-        //            cmd.Parameters.AddWithValue("@email", doctorDetails.email);
-        //            cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);
-        //            cmd.Parameters.AddWithValue("@address", doctorDetails.address);
-
-        //            int i = cmd.ExecuteNonQuery();
-        //            cmd.Dispose();
-
-        //            if (i > 0)
-        //            {
-        //                return Ok(new { message = "Doctor has been updated" });
-        //            }
-        //            else
-        //            {
-        //                return BadRequest(new { message = "Error" });
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { error = "An error occurred", message = ex.Message });
-        //    }
-
-        //}
-
-
         [HttpPut]
         [Route("doctor/update")]
         public ActionResult<string> PutDoctorData(Doctor doctorDetails)

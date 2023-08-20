@@ -38,8 +38,8 @@ namespace HMSBackend.Controllers
                     string sqlQuery = $@"SELECT category_id, category_name 
                         FROM (SELECT *, ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber 
                               FROM category 
-                              WHERE (category_id LIKE @category_id OR @category_id IS NULL) AND 
-                                    (category_name LIKE @category_name OR @category_name IS NULL)) AS subquery 
+                              WHERE category_id LIKE '%' + @category_id + '%' AND 
+                                    category_name LIKE '%' + @category_name + '%' ) AS subquery 
                         WHERE RowNumber BETWEEN @StartRow AND @EndRow";
 
                     int startRow = (page - 1) * pageSize + 1;
@@ -64,6 +64,71 @@ namespace HMSBackend.Controllers
                     reader.Close();
                 }
                 return Ok(categoryList);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+            }
+        }
+        [HttpPost]
+        [Route("category/create")]
+        public ActionResult<string> Postcategory(Category category)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("INSERT INTO category(category_id,category_name,created_by) VALUES(@category_id,@category_name,@created_by)", con);
+                    cmd.Parameters.AddWithValue("@category_id", category.category_id);
+                    cmd.Parameters.AddWithValue("@category_name", category.category_name);
+                    cmd.Parameters.AddWithValue("@created_by", category.created_by);
+
+                    int i = cmd.ExecuteNonQuery();
+                    cmd.Dispose();
+                    if (i > 0)
+                    {
+                        return Ok(new { message = "Category added Sucessfuly" });
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Error" });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+            }
+        }
+        [HttpPut]
+        [Route("category/update")]
+        public ActionResult<string> PutCategory(Category category)
+        {
+            try
+            {
+                string id = category.category_id;
+                
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand("UPDATE category SET category_name = @category_name, updated_by = @updated_by, updated_date = @updated_date WHERE category_id = @id", con);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    cmd.Parameters.AddWithValue("@category_name", category.category_name);
+                    cmd.Parameters.AddWithValue("@updated_by", category.updated_by);
+                    cmd.Parameters.AddWithValue("@updated_date", category.updated_date); // Corrected parameter name
+
+                    int i = cmd.ExecuteNonQuery();
+                    cmd.Dispose();
+                    if (i > 0)
+                    {
+                        return Ok(new { message = "Category updated Successfully" });
+                    }
+                    else
+                    {
+                        return BadRequest(new { message = "Error" });
+                    }
+                }
             }
             catch (Exception ex)
             {

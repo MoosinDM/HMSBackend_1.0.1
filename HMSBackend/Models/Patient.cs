@@ -11,6 +11,8 @@
         public string address { get; set; }
         public string doctor_id { get; set; }
         public string created_by { get; set; }
+        public string updated_by { get; set; }
+        public DateTime updated_date { get; set; }
 
     }
 }

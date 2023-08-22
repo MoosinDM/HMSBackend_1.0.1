@@ -7,9 +7,11 @@ using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using System.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace HMSBackend.Controllers
 {
+    [Authorize]
     [Route("api/")]
     [ApiController]
     public class PatientController : ControllerBase
@@ -25,33 +27,37 @@ namespace HMSBackend.Controllers
 
         [HttpPost]
         [Route("patient/fetchAll")]
-        public ActionResult<IEnumerable<Patient>> PostPatient(FilterPatientCriteria filterCriteria)
+        public ActionResult<DoctorSearchResult> PostPatient(FilterPatientCriteria filterCriteria)
         {
-            List<Patient> patientList = new List<Patient>();
-
             try
             {
                 int page = Convert.ToInt32(filterCriteria.page);
                 int pageSize = Convert.ToInt32(filterCriteria.pageSize);
-                //string sortBy = Request.Query["sortBy"];
-                //string order = Request.Query["order"];
                 string sortByColumn = !string.IsNullOrEmpty(filterCriteria.sortBy) ? filterCriteria.sortBy : "patient_id";
                 string sortOrder = !string.IsNullOrEmpty(filterCriteria.order) ? filterCriteria.order.ToUpper() : "ASC"; // Default to ascending order
+
+                List<Patient> patientList = new List<Patient>();
+                int totalCount = 0;
 
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
 
-                    string sqlQuery =$@"
-                    SELECT *
-                    FROM (
-                        SELECT *,
-                            ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
-                        FROM patient_table
-                    ) AS Subquery
-                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
-                    "patient_id LIKE '%' + @patient_id + '%' AND" +
-                    " name LIKE '%' + @name + '%'";
+                    string sqlQuery = $@"
+                SELECT *
+                FROM (
+                    SELECT *,
+                        ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
+                    FROM patient_table
+                ) AS Subquery
+                WHERE RowNumber BETWEEN @StartRow AND @EndRow AND 
+                      patient_id LIKE '%' + @patient_id + '%' AND 
+                      name LIKE '%' + @name + '%';";
+
+                    string countQuery = @"
+                SELECT COUNT(*) FROM patient_table
+                WHERE patient_id LIKE '%' + @patient_id + '%' AND 
+                      name LIKE '%' + @name + '%';";
 
                     int startRow = (page - 1) * pageSize + 1;
                     int endRow = page * pageSize;
@@ -72,7 +78,7 @@ namespace HMSBackend.Controllers
                             mobile = reader["mobile"] as string,
                             email = reader["email"] as string,
                             age = (int)reader["age"],
-                            gender = reader["gender"] as string, // Correct the column name
+                            gender = reader["gender"] as string,
                             doctor_id = reader["doctor_id"] as string,
                             created_by = reader["created_by"] as string
                         };
@@ -80,16 +86,27 @@ namespace HMSBackend.Controllers
                         patientList.Add(patient);
                     }
                     reader.Close();
+
+                    SqlCommand cmdCount = new SqlCommand(countQuery, con);
+                    cmdCount.Parameters.AddWithValue("@patient_id", filterCriteria.patient_id);
+                    cmdCount.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
+                    totalCount = (int)cmdCount.ExecuteScalar(); // Get total count
                 }
 
-                return Ok(patientList);
+                DoctorSearchResult result = new DoctorSearchResult
+                {
+                    TotalCount = totalCount,
+                    Patients = patientList
+                };
+
+                return Ok(result);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
-
         }
+
 
         [HttpPost]
         [Route("patient/create")]
@@ -146,7 +163,7 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("UPDATE patient_table SET name = @name, mobile = @mobile, email = @email, age = @age, gender = @gender, address = @address, doctor_id = @doctor_id WHERE patient_id = @id", con);
+                    SqlCommand cmd = new SqlCommand("UPDATE patient_table SET name = @name, mobile = @mobile, email = @email, age = @age, gender = @gender, address = @address, doctor_id = @doctor_id, updated_by = @updated_by, updated_date = @updated_date WHERE patient_id = @id", con);
                     cmd.Parameters.AddWithValue("@id", id);
                     cmd.Parameters.AddWithValue("@name", patient.name);
                     cmd.Parameters.AddWithValue("@mobile", patient.mobile);
@@ -155,7 +172,8 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@gender", patient.gender);
                     cmd.Parameters.AddWithValue("@address", patient.address);
                     cmd.Parameters.AddWithValue("@doctor_id", patient.doctor_id);
-
+                    cmd.Parameters.AddWithValue("@updated_by", patient.updated_by);
+                    cmd.Parameters.AddWithValue("@updated_date", patient.updated_date);
                     int i = cmd.ExecuteNonQuery();
                     cmd.Dispose();
 
@@ -212,36 +230,44 @@ namespace HMSBackend.Controllers
 
 
 
-        
+
         /// Patient History API and CRUD Operations
 
         [HttpPost]
         [Route("patient_hist/fetchAll")]
-        public ActionResult<string> GetPatienthistData(FilterPatientHistCriteria filterPatientHistCriteria)
+        public ActionResult<DoctorSearchResult> GetPatienthistData(FilterPatientHistCriteria filterPatientHistCriteria)
         {
-            List<Patient_hist> patient_hist = new List<Patient_hist>();
             try
             {
                 int page = Convert.ToInt32(filterPatientHistCriteria.page);
                 int pageSize = Convert.ToInt32(filterPatientHistCriteria.pageSize);
-                //string sortBy = Request.Query["sortBy"];
-                //string order = Request.Query["order"];
                 string sortByColumn = !string.IsNullOrEmpty(filterPatientHistCriteria.sortBy) ? filterPatientHistCriteria.sortBy : "patient_hist_id";
                 string sortOrder = !string.IsNullOrEmpty(filterPatientHistCriteria.order) ? filterPatientHistCriteria.order.ToUpper() : "ASC"; // Default to ascending order
                 string patient_type = !string.IsNullOrEmpty(filterPatientHistCriteria.patient_type) ? filterPatientHistCriteria.patient_type : "OPD";
+
+                List<Patient_hist> patientHistList = new List<Patient_hist>();
+                int totalCount = 0;
+
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
+
                     string sqlQuery = $@"
-                    SELECT *
-                    FROM (
-                        SELECT *,
-                            ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
-                        FROM patient_history_table
-                    ) AS Subquery
-                    WHERE patient_type = @patient_type AND RowNumber BETWEEN @StartRow AND @EndRow AND " +
-                    "patient_hist_id LIKE '%' + @patient_hist_id + '%' AND" +
-                    " patient_id LIKE '%' + @patient_id + '%'";
+                SELECT *
+                FROM (
+                    SELECT *,
+                        ROW_NUMBER() OVER(ORDER BY {sortByColumn} {sortOrder}) AS RowNumber
+                    FROM patient_history_table
+                ) AS Subquery
+                WHERE patient_type = @patient_type AND RowNumber BETWEEN @StartRow AND @EndRow AND 
+                      patient_hist_id LIKE '%' + @patient_hist_id + '%' AND 
+                      patient_id LIKE '%' + @patient_id + '%';";
+
+                    string countQuery = @"
+                SELECT COUNT(*) FROM patient_history_table
+                WHERE patient_type = @patient_type AND
+                      patient_hist_id LIKE '%' + @patient_hist_id + '%' AND 
+                      patient_id LIKE '%' + @patient_id + '%';";
 
                     int startRow = (page - 1) * pageSize + 1;
                     int endRow = page * pageSize;
@@ -252,10 +278,11 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@patient_hist_id", filterPatientHistCriteria.patient_hist_id);
                     cmd.Parameters.AddWithValue("@patient_id", "%" + filterPatientHistCriteria.patient_id + "%");
                     cmd.Parameters.AddWithValue("@patient_type", patient_type);
+
                     SqlDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
-                        Patient_hist patient_Hist = new Patient_hist
+                        Patient_hist patientHist = new Patient_hist
                         {
                             patient_hist_id = reader["patient_hist_id"] as string,
                             date = (DateTime)reader["date"],
@@ -269,19 +296,31 @@ namespace HMSBackend.Controllers
                             created_by = reader["created_by"] as string
                         };
 
-                        patient_hist.Add(patient_Hist);
+                        patientHistList.Add(patientHist);
                     }
                     reader.Close();
+
+                    SqlCommand cmdCount = new SqlCommand(countQuery, con);
+                    cmdCount.Parameters.AddWithValue("@patient_hist_id", filterPatientHistCriteria.patient_hist_id);
+                    cmdCount.Parameters.AddWithValue("@patient_id", "%" + filterPatientHistCriteria.patient_id + "%");
+                    cmdCount.Parameters.AddWithValue("@patient_type", patient_type);
+                    totalCount = (int)cmdCount.ExecuteScalar(); // Get total count
                 }
 
-                return Ok(patient_hist);
+                DoctorSearchResult result = new DoctorSearchResult
+                {
+                    TotalCount = totalCount,
+                    PatientsHist = patientHistList
+                };
+
+                return Ok(result);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
-
         }
+
 
 
         [HttpPost]

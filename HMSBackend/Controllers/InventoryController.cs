@@ -1,10 +1,12 @@
 ﻿using HMSBackend.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 
 namespace HMSBackend.Controllers
 {
+    //[Authorize]
     [Route("api/")]
     [ApiController]
     public class InventoryController : ControllerBase

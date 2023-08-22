@@ -1,4 +1,5 @@
 ﻿using HMSBackend.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Win32;
@@ -6,6 +7,7 @@ using System.Data.SqlClient;
 
 namespace HMSBackend.Controllers
 {
+    [Authorize]
     [Route("api/register")]
     [ApiController]
     public class RegistrationController : ControllerBase

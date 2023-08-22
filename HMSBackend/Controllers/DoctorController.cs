@@ -12,7 +12,7 @@ using System.Data.SqlClient;
 
 namespace HMSBackend.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [Route("api/")]
     [ApiController]
     public class DoctorController : ControllerBase
@@ -26,7 +26,7 @@ namespace HMSBackend.Controllers
         ////Server side paging and sorting
         [HttpPost]
         [Route("doctor/fetchAll")]
-        public ActionResult<IEnumerable<Doctor>> PostDoctor(FilterCriteria filterCriteria)
+        public ActionResult<DoctorSearchResult> PostDoctor(FilterCriteria filterCriteria)
         {
             try
             {
@@ -40,16 +40,22 @@ namespace HMSBackend.Controllers
                     con.Open();
 
                     string sqlQuery = $@"
-                    SELECT doctor_id, name, mobile, email, specialist, qualification, address
-                    FROM (
-                        SELECT *,
-                            ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
-                        FROM doctor_table
-                    ) AS Subquery
-                    WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
-                    "doctor_id LIKE '%' + @doctor_id + '%' AND " +
-                                   "      name LIKE '%' + @name + '%' AND " +
-                                   "specialist LIKE '%' + @specialist + '%'";
+                SELECT doctor_id, name, mobile, email, specialist, qualification, address
+                FROM (
+                    SELECT *,
+                        ROW_NUMBER() OVER(ORDER BY {sortBy} {order}) AS RowNumber
+                    FROM doctor_table
+                ) AS Subquery
+                WHERE RowNumber BETWEEN @StartRow AND @EndRow AND " +
+                        "doctor_id LIKE '%' + @doctor_id + '%' AND " +
+                        "name LIKE '%' + @name + '%' AND " +
+                        "specialist LIKE '%' + @specialist + '%'";
+        
+            string countQuery = @"
+                SELECT COUNT(*) FROM doctor_table
+                WHERE doctor_id LIKE '%' + @doctor_id + '%' AND " +
+                "name LIKE '%' + @name + '%' AND " +
+                "specialist LIKE '%' + @specialist + '%';";
 
                     int startRow = (page - 1) * pageSize + 1;
                     int endRow = page * pageSize;
@@ -59,7 +65,6 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@EndRow", endRow);
                     cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
                     cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
-                    //cmd.Parameters.AddWithValue("@specialist", filterCriteria.specialist); // Assuming specialist is a string, adjust as needed
                     cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
 
                     SqlDataReader reader = cmd.ExecuteReader();
@@ -74,7 +79,6 @@ namespace HMSBackend.Controllers
                             email = reader["email"] as string,
                             qualification = reader["qualification"] as string,
                             address = reader["address"] as string,
-                            // Fetch the specialist data and parse it as a string array
                             specialist = JArray.Parse(reader["specialist"].ToString()).ToObject<string[]>()
                         };
 
@@ -82,15 +86,27 @@ namespace HMSBackend.Controllers
                     }
                     reader.Close();
 
-                    return Ok(doctorList);
+                    cmd = new SqlCommand(countQuery, con);
+                    cmd.Parameters.AddWithValue("@doctor_id", filterCriteria.doctor_id);
+                    cmd.Parameters.AddWithValue("@name", "%" + filterCriteria.name + "%");
+                    cmd.Parameters.AddWithValue("@specialist", '%' + filterCriteria.specialist + "%");
+                    int totalCount = (int)cmd.ExecuteScalar();
+
+                    DoctorSearchResult result = new DoctorSearchResult
+                    {
+                        TotalCount = totalCount,
+                        Doctors = doctorList
+                    };
+
+                    return Ok(result);
                 }
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = "An error occurred", message = ex.Message });
             }
-
         }
+
 
 
         //POST
@@ -106,7 +122,7 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("INSERT INTO doctor_table(doctor_id, name, mobile, specialist, email, qualification, address) VALUES(@doctor_id, @name, @mob_no, @specialist, @email, @qualification, @address)", con);
+                    SqlCommand cmd = new SqlCommand("INSERT INTO doctor_table(doctor_id, name, mobile, specialist, email, qualification, address, created_by) VALUES(@doctor_id, @name, @mob_no, @specialist, @email, @qualification, @address, @created_by)", con);
                     cmd.Parameters.AddWithValue("@doctor_id", doctorDetails.doctor_id);
                     cmd.Parameters.AddWithValue("@name", doctorDetails.name);
                     cmd.Parameters.AddWithValue("@mob_no", doctorDetails.mob_no);
@@ -114,13 +130,14 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@email", doctorDetails.email);
                     cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);
                     cmd.Parameters.AddWithValue("@address", doctorDetails.address);
+                    cmd.Parameters.AddWithValue("@created_by", doctorDetails.created_by);
 
                     int i = cmd.ExecuteNonQuery();
                     cmd.Dispose();
 
                     if(i > 0)
                     {
-                        return Ok(new {meesage = "Doctor has been Inserted"});
+                        return Ok(new {message = "Doctor has been Inserted"});
                     }
                     else
                     {
@@ -147,7 +164,7 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("UPDATE doctor_table SET name = @name, mobile = @mob_no, specialist = @specialist, email = @email, qualification = @qualification, address = @address WHERE doctor_id = @id", con);
+                    SqlCommand cmd = new SqlCommand("UPDATE doctor_table SET name = @name, mobile = @mob_no, specialist = @specialist, email = @email, qualification = @qualification, address = @address, updated_by = @updated_by, updated_date = @updated_date WHERE doctor_id = @id", con);
                     cmd.Parameters.AddWithValue("@id", id);
                     cmd.Parameters.AddWithValue("@name", doctorDetails.name);
                     cmd.Parameters.AddWithValue("@mob_no", doctorDetails.mob_no);
@@ -155,6 +172,8 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@email", doctorDetails.email);
                     cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);
                     cmd.Parameters.AddWithValue("@address", doctorDetails.address);
+                    cmd.Parameters.AddWithValue("@updated_by", doctorDetails.updated_by);
+                    cmd.Parameters.AddWithValue("@updated_date", doctorDetails.updated_date);
 
                     int i = cmd.ExecuteNonQuery();
                     cmd.Dispose();

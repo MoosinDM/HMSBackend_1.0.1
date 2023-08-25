@@ -12,7 +12,7 @@ using System.Data.SqlClient;
 
 namespace HMSBackend.Controllers
 {
-    [Authorize]
+    //[Authorize]
     [Route("api/")]
     [ApiController]
     public class DoctorController : ControllerBase
@@ -75,7 +75,7 @@ namespace HMSBackend.Controllers
                         {
                             doctor_id = reader["doctor_id"] as string,
                             name = reader["name"] as string,
-                            mob_no = reader["mobile"] as string,
+                            mobile = reader["mobile"] as string,
                             email = reader["email"] as string,
                             qualification = reader["qualification"] as string,
                             address = reader["address"] as string,
@@ -122,10 +122,10 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("INSERT INTO doctor_table(doctor_id, name, mobile, specialist, email, qualification, address, created_by) VALUES(@doctor_id, @name, @mob_no, @specialist, @email, @qualification, @address, @created_by)", con);
+                    SqlCommand cmd = new SqlCommand("INSERT INTO doctor_table(doctor_id, name, mobile, specialist, email, qualification, address, created_by) VALUES(@doctor_id, @name, @mobbile, @specialist, @email, @qualification, @address, @created_by)", con);
                     cmd.Parameters.AddWithValue("@doctor_id", doctorDetails.doctor_id);
                     cmd.Parameters.AddWithValue("@name", doctorDetails.name);
-                    cmd.Parameters.AddWithValue("@mob_no", doctorDetails.mob_no);
+                    cmd.Parameters.AddWithValue("@mobile", doctorDetails.mobile);
                     cmd.Parameters.AddWithValue("@specialist", specialistJson);
                     cmd.Parameters.AddWithValue("@email", doctorDetails.email);
                     cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);
@@ -135,9 +135,9 @@ namespace HMSBackend.Controllers
                     int i = cmd.ExecuteNonQuery();
                     cmd.Dispose();
 
-                    if(i > 0)
+                    if (i > 0)
                     {
-                        return Ok(new {message = "Doctor has been Inserted"});
+                        return Ok(new { message = "Doctor has been Inserted" });
                     }
                     else
                     {
@@ -152,6 +152,56 @@ namespace HMSBackend.Controllers
 
         }
 
+
+        //Auto Generate ID need to test
+        //[HttpPost]
+        //[Route("doctor/create")]
+        //public ActionResult<string> PostDoctorData(Doctor doctorDetails)
+        //{
+        //    try
+        //    {
+        //        string specialistJson = JsonConvert.SerializeObject(doctorDetails.specialist);
+
+        //        // Create an instance of UniqueIdGenerator
+        //        UniqueIdGenerator idGenerator = new UniqueIdGenerator();
+
+        //        // Generate the unique doctor_id with the desired format
+        //        string doctorId = idGenerator.GenerateUniqueId("D");
+
+        //        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
+        //        {
+        //            con.Open();
+        //            SqlCommand cmd = new SqlCommand("INSERT INTO doctor_table(doctor_id, name, mobile, specialist, email, qualification, address, created_by) VALUES(@doctor_id, @name, @mob_no, @specialist, @email, @qualification, @address, @created_by)", con);
+        //            cmd.Parameters.AddWithValue("@doctor_id", doctorId);
+        //            cmd.Parameters.AddWithValue("@name", doctorDetails.name);
+        //            cmd.Parameters.AddWithValue("@mob_no", doctorDetails.mob_no);
+        //            cmd.Parameters.AddWithValue("@specialist", specialistJson);
+        //            cmd.Parameters.AddWithValue("@email", doctorDetails.email);
+        //            cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);
+        //            cmd.Parameters.AddWithValue("@address", doctorDetails.address);
+        //            cmd.Parameters.AddWithValue("@created_by", doctorDetails.created_by);
+
+        //            int i = cmd.ExecuteNonQuery();
+        //            cmd.Dispose();
+
+        //            if (i > 0)
+        //            {
+        //                return Ok(new { message = "Doctor has been Inserted" });
+        //            }
+        //            else
+        //            {
+        //                return BadRequest(new { message = "Error" });
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { error = "An error occurred", message = ex.Message });
+        //    }
+        //}
+
+
+
         [HttpPut]
         [Route("doctor/update")]
         public ActionResult<string> PutDoctorData(Doctor doctorDetails)
@@ -164,10 +214,10 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("UPDATE doctor_table SET name = @name, mobile = @mob_no, specialist = @specialist, email = @email, qualification = @qualification, address = @address, updated_by = @updated_by, updated_date = @updated_date WHERE doctor_id = @id", con);
+                    SqlCommand cmd = new SqlCommand("UPDATE doctor_table SET name = @name, mobile = @mobile, specialist = @specialist, email = @email, qualification = @qualification, address = @address, updated_by = @updated_by, updated_date = @updated_date WHERE doctor_id = @id", con);
                     cmd.Parameters.AddWithValue("@id", id);
                     cmd.Parameters.AddWithValue("@name", doctorDetails.name);
-                    cmd.Parameters.AddWithValue("@mob_no", doctorDetails.mob_no);
+                    cmd.Parameters.AddWithValue("@mobile", doctorDetails.mobile);
                     cmd.Parameters.AddWithValue("@specialist", specialistJson);
                     cmd.Parameters.AddWithValue("@email", doctorDetails.email);
                     cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);

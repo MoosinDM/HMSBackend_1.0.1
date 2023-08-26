@@ -122,7 +122,7 @@ namespace HMSBackend.Controllers
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
                     con.Open();
-                    SqlCommand cmd = new SqlCommand("INSERT INTO doctor_table(doctor_id, name, mobile, specialist, email, qualification, address, created_by) VALUES(@doctor_id, @name, @mobbile, @specialist, @email, @qualification, @address, @created_by)", con);
+                    SqlCommand cmd = new SqlCommand("INSERT INTO doctor_table(doctor_id, name, mobile, specialist, email, qualification, address, created_by) VALUES(@doctor_id, @name, @mobile, @specialist, @email, @qualification, @address, @created_by)", con);
                     cmd.Parameters.AddWithValue("@doctor_id", doctorDetails.doctor_id);
                     cmd.Parameters.AddWithValue("@name", doctorDetails.name);
                     cmd.Parameters.AddWithValue("@mobile", doctorDetails.mobile);
@@ -210,6 +210,7 @@ namespace HMSBackend.Controllers
             {
                 string id = doctorDetails.doctor_id;
                 string specialistJson = JsonConvert.SerializeObject(doctorDetails.specialist);
+                DateTime currentDateTime = DateTime.Now; // Get the current system date and time
 
                 using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("HMSEntities")))
                 {
@@ -223,7 +224,8 @@ namespace HMSBackend.Controllers
                     cmd.Parameters.AddWithValue("@qualification", doctorDetails.qualification);
                     cmd.Parameters.AddWithValue("@address", doctorDetails.address);
                     cmd.Parameters.AddWithValue("@updated_by", doctorDetails.updated_by);
-                    cmd.Parameters.AddWithValue("@updated_date", doctorDetails.updated_date);
+                    //cmd.Parameters.AddWithValue("@updated_date", doctorDetails.updated_date);
+                    cmd.Parameters.AddWithValue("@updated_date", currentDateTime); // Set the updated_date to currentDateTime
 
                     int i = cmd.ExecuteNonQuery();
                     cmd.Dispose();
